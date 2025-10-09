@@ -1,0 +1,18 @@
+{
+    "title_font_name": "Pretendard Std Variable",
+    "desc_font_name": "Pretendard Std Variable",
+    "title_font_size": 96,
+    "desc_font_size": 72,
+    "padding_left": 72,
+    "padding_bottom": 96,
+    "line_spacing": 32,
+    "char_spacing": 0,
+    "fill_color": [255, 255, 255],
+    "stroke_color": [0, 0, 0],
+    "stroke_width": 5,
+    "target_width": 1920,
+    "target_height": 1080,
+    "max_thumbnail_bytes": 2097152,
+    "title_font_weight": 630,
+    "desc_font_weight": 480
+}

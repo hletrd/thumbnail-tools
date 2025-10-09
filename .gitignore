@@ -1,0 +1,11 @@
+inputs/**/*.mp4
+inputs/**/*.mov
+inputs/**/*.mkv
+inputs/**/*.m4v
+inputs/**/*.webm
+inputs/**/*.mpg
+inputs/**/*.mpeg
+thumbnails/**/*.jpg
+thumbnails_culled/*.jpg
+thumbnails_culled/*.jpeg
+thumbnail_rendered/*.jpg
