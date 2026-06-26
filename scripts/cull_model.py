@@ -12,8 +12,8 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "thumbnails"
 DST = ROOT / "thumbnails_culled"
-K = 9
-POOL = 24
+K = 15            # candidates shown per video
+POOL = 24         # (unused; selection is sharpness-first with dup-skip)
 DST.mkdir(parents=True, exist_ok=True)
 cv2.setNumThreads(1)
 FACE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
@@ -73,18 +73,17 @@ def cull_video(key):
     expo[mean < 22] = 0.5; expo[mean > 232] = 0.7; expo[clip > 0.30] = 0.6
     # sharpness dominates (avoid blur); face is a secondary bonus. close-up is manual (wheel zoom).
     score = (0.72*s_n + 0.38*face) * expo
-    order = list(np.argsort(-score))
-    pool = order[:max(POOL, k)]
-    picked = [pool[0]]
-    while len(picked) < k:
-        best_i, best_v = None, -1.0
-        for i in pool:
-            if i in picked: continue
-            mind = min(np.count_nonzero(dh[i] != dh[j]) for j in picked)/64.0
-            rankbonus = 1.0 - pool.index(i)/len(pool)
-            v = mind + 0.3*rankbonus
-            if v > best_v: best_v, best_i = v, i
-        picked.append(best_i)
+    order = list(np.argsort(-score))           # sharpest (highest score) first
+    DUP = 8                                     # skip near-identical frames (dHash hamming < DUP)
+    picked = []
+    for i in order:
+        if len(picked) >= k: break
+        if any(np.count_nonzero(dh[i] != dh[j]) < DUP for j in picked): continue
+        picked.append(i)
+    if len(picked) < k:                         # fill if dup-skip left us short
+        for i in order:
+            if len(picked) >= k: break
+            if i not in picked: picked.append(i)
     picked.sort()
     for i in picked:
         shutil.copy2(frames[i], DST/frames[i].name)
