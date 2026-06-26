@@ -1,1 +1,4 @@
+# Web UI (web.py)
 Flask
+Pillow
+waitress

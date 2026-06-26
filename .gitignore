@@ -1,3 +1,4 @@
+# --- source video files (never commit) ---
 inputs/**/*.mp4
 inputs/**/*.mov
 inputs/**/*.mkv
@@ -5,7 +6,28 @@ inputs/**/*.m4v
 inputs/**/*.webm
 inputs/**/*.mpg
 inputs/**/*.mpeg
+inputs/*.json
+
+# --- generated thumbnails / previews ---
 thumbnails/**/*.jpg
 thumbnails_culled/*.jpg
 thumbnails_culled/*.jpeg
 thumbnail_rendered/*.jpg
+thumbnail_rendered/*.jpeg
+.previews/
+
+# --- runtime state / generated data ---
+state.db
+data.json
+crops.json
+cropsettings.json
+selections.json
+match_report.csv
+thumbnail_metadata_reference.json
+
+# --- misc ---
+__pycache__/
+*.pyc
+*.bak
+.omc/
+.DS_Store
