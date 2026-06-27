@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>Thumbnail Generator</title>
+  <title>썸네일 생성기</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendard-variable.min.css">
   <style>
@@ -59,8 +59,8 @@
 </head>
 <body>
   <header>
-    <h1>Thumbnail Generator</h1>
-    <span class="stats"><b id="done">0</b> / <span id="total">{{ videos|length }}</span> selected</span>
+    <h1>썸네일 생성기</h1>
+    <span class="stats"><b id="done">0</b> / <span id="total">{{ videos|length }}</span> 선택됨</span>
     <input class="filter" id="filter" type="text" placeholder="제목으로 필터…">
   </header>
   <main id="main">
@@ -79,9 +79,9 @@
       </div>
       <div class="side">
         <div class="pvwrap"><span class="hint">후보를 클릭하면 미리보기</span></div>
-        <label>Title</label>
+        <label>제목</label>
         <textarea class="title" rows="2">{{ v.title }}</textarea>
-        <label>Description</label>
+        <label>설명</label>
         <input type="text" class="desc" value="{{ v.desc }}">
         <div class="actbar">
           <button class="btn primary save" disabled>저장</button>
@@ -95,7 +95,6 @@
 
 <script>
 const CONFIG = {{ config_json | safe }};
-const CROPS = {{ crops_json | safe }};
 const CROPSET = {{ cropset_json | safe }};
 const enc = v => encodeURIComponent(v || "");
 const fullCache = new Map();
