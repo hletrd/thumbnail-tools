@@ -20,8 +20,8 @@ DATA_PATH = Path("./data.json")
 SELECTIONS_PATH = Path("./selections.json")
 CROPS_PATH = Path("./crops.json")
 PREVIEW_DIR = Path("./.previews")
-PREVIEW_WIDTH = 512
-PREVIEW_QUALITY = 62
+PREVIEW_WIDTH = 800
+PREVIEW_QUALITY = 66
 
 
 def _cover_169(im):
