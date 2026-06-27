@@ -27,8 +27,13 @@ match. Modern YouTube needs help:
   downloads from one IP. Mitigation: keep parallelism low (`PAR=1–2`), retry,
   or let it cool down. Valid login cookies (`--cookies cookies.txt`) also clear
   it, but stale cookies do **not** help.
-- Extraction: single decode pass with a `select` filter at N evenly-spaced
-  timestamps (5%–95% of duration) → `thumbnails/<key>/<key>_%03d.jpg`.
+- Extraction (`scripts/dense_extract.py`): download the video (kept in
+  `downloads/`, never deleted), decode at **6 fps**, and keep only the
+  **sharpest frame per 1-second bucket** → `thumbnails/<key>/<key>_%03d.jpg`.
+  This ±1s-sharpest sampling beats fixed 1 fps: on fast-motion stages a whole
+  second can be motion-blur except one crisp instant, and this captures it.
+  Resumable (`downloads/<key>.done`); `PAR=1` after a bot-check, `cookies.txt`
+  at the repo root is auto-used to bypass one.
 
 ### NAS masters (alternative, `ffmpeg`)
 - Masters live under `…/photos/<date-event>/exported*/` named by song or artist.
@@ -50,11 +55,13 @@ match. Modern YouTube needs help:
 > match *score* does **not** reliably separate right from wrong (correct matches
 > often score ~0). That's why the batch was re-sourced entirely from YouTube.
 
-`N = 192` frames/video gives the culler a dense pool (~1 frame/sec).
+This yields ~1 locally-sharpest frame/sec — a dense, blur-averse pool for the
+culler. (An earlier version sampled fixed evenly-spaced timestamps; the cull
+then had to discard the many that landed mid-motion.)
 
 ---
 
-## 2. Auto-cull → 9 best per video (`scripts/cull_model.py`)
+## 2. Auto-cull → 15 best per video (`scripts/cull_model.py`)
 
 Per frame, measured on the **stage region only** (top ~70%, excludes the
 audience/crowd band at the bottom), at 960px:
@@ -70,10 +77,11 @@ audience/crowd band at the bottom), at 960px:
 score = (0.72 * sharpness_norm + 0.38 * face) * exposure
 ```
 
-Take the top `POOL=24` by score, then greedily pick `K=9` maximising dHash
-diversity (avoid 9 near-identical frames). **Use `ProcessPoolExecutor`** — the
-Haar cascade is **not thread-safe** (`ThreadPoolExecutor` crashes with a
-`getScaleData` assertion).
+Pick `K=15` in **score (sharpness) order**, skipping near-identical frames
+(dHash hamming < 8) so the candidates are the sharpest *distinct* ones.
+(An earlier diversity-first greedy let blurry-but-different frames in.)
+**Use `ProcessPoolExecutor`** — the Haar cascade is **not thread-safe**
+(`ThreadPoolExecutor` crashes with a `getScaleData` assertion).
 
 > Earlier the weighting favoured faces (close-up) over sharpness, which surfaced
 > blurry frames. Close-up is now handled manually in the UI (wheel zoom), so the

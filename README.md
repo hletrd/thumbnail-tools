@@ -12,20 +12,22 @@ Built for ~200 K-pop fancam uploads, but works for any video set.
 
 ```
 source videos ──► candidate frames ──► auto-cull (model) ──► web UI ──► rendered thumbnail
- (NAS / YouTube)   thumbnails/<key>/    thumbnails_culled/    pick+crop+text   thumbnail_rendered/
-                   192 frames / video   9 best / video        per video         (+ direct download)
+ (YouTube / NAS)   thumbnails/<key>/    thumbnails_culled/    pick+crop+text   thumbnail_rendered/
+                   sharpest frame/sec   15 best / video       per video         (+ direct download)
 ```
 
-1. **Candidate frames** — N evenly-spaced frames per video into `thumbnails/<key>/`
-   (HDR→SDR tone-mapped where needed, scaled to 1920px). See
-   [`docs/PIPELINE.md`](docs/PIPELINE.md) for how the frames were sourced
-   (YouTube via `yt-dlp`, or local masters via `ffmpeg`).
+1. **Candidate frames** — `scripts/dense_extract.py` downloads each video
+   (kept in `downloads/`), decodes at 6 fps and keeps the **sharpest frame per
+   1-second bucket** into `thumbnails/<key>/` (1920px). This ±1s-sharpest
+   sampling avoids motion-blur far better than fixed 1 fps. See
+   [`docs/PIPELINE.md`](docs/PIPELINE.md) for sourcing details (YouTube via
+   `yt-dlp`, or local masters via `ffmpeg`).
 2. **Auto-cull** — `scripts/cull_model.py` scores every frame by **sharpness**
    (stage-region Tenengrad, blur-averse) + a **face** bonus (OpenCV Haar,
-   stage area only) and writes the best **9 per video** to `thumbnails_culled/`,
-   then `scripts/autocorrect.py` lifts dull (HLG-tonemapped) whites toward 100%
-   and gently sharpens.
-3. **Web UI** (`web.py`) — one section per video showing the 9 candidates;
+   stage area only) and writes the **15 sharpest distinct per video** to
+   `thumbnails_culled/`, then `scripts/autocorrect.py` lifts dull
+   (HLG-tonemapped) whites toward 100% and gently sharpens.
+3. **Web UI** (`web.py`) — one section per video showing the 15 candidates;
    click to select, frame it (mouse-wheel zoom + drag), edit title/description
    (auto-saved), then **Save** (renders to `thumbnail_rendered/`) or **Download**.
 4. **Persistence** — selection, title/description and crop are stored in a
@@ -49,7 +51,7 @@ python web.py                            # serves on 0.0.0.0:8080
 Open `http://<host>:8080/`.
 
 **Features**
-- **Per-video workflow** — 9 candidate thumbnails per video; pick one, the rest
+- **Per-video workflow** — 15 candidate thumbnails per video; pick one, the rest
   stay as alternatives.
 - **Manual framing** — mouse **wheel = zoom** (cursor-anchored, gentle steps),
   **drag = pan**. Default zoom 1× (no crop, nothing cut). Per-video, persisted.
@@ -58,8 +60,8 @@ Open `http://<host>:8080/`.
   (Pretendard font, stroke, bottom gradient + drop shadow for legibility).
 - **Save / Download** — Save writes a JPEG to `thumbnail_rendered/`; Download
   grabs it straight to the browser.
-- **Fast & dark** — sticky dark header, title filter, AVIF previews (512px,
-  lazy-loaded) so a 1700+ image grid stays snappy.
+- **Fast & dark** — sticky dark header, title filter, AVIF previews (800px,
+  lazy-loaded) so a large image grid stays snappy.
 - Default ordering follows the input video JSON (newest upload first).
 
 ### Endpoints
@@ -100,13 +102,15 @@ Legacy `selections.json` / `cropsettings.json` are auto-migrated on first run.
 web.py                     Flask app (gallery, preview/image, save, DB)
 config.json                render config (fonts, sizes, stroke, 1920x1080, 2MB cap)
 templates/index.html       dark per-video UI + canvas render + wheel/drag crop
-scripts/cull_model.py      auto-cull: sharpness + face → 9 best per video
+scripts/dense_extract.py   ±1s-sharpest frame sourcing (yt-dlp + ffmpeg)
+scripts/cull_model.py      auto-cull: sharpness + face → 15 best per video
 scripts/autocorrect.py     white-point lift + gentle sharpen on culled frames
 scripts/facecrop.py        (optional) auto face-centered crop boxes → crops.json
 extract.py                 original local-video keyframe extractor (ffmpeg)
 docs/PIPELINE.md           full data pipeline / how candidates were produced
+downloads/                 kept source videos + .done markers (gitignored)
 thumbnails/<key>/          candidate frames (gitignored)
-thumbnails_culled/         the culled 9/video shown in the UI (gitignored)
+thumbnails_culled/         the culled 15/video shown in the UI (gitignored)
 thumbnail_rendered/        final saved thumbnails (gitignored)
 .previews/                 cached AVIF grid previews (gitignored)
 state.db, data.json        runtime state / defaults (gitignored)
