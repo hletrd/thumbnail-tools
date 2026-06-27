@@ -19,7 +19,6 @@ thumbnail_rendered/*.jpeg
 # --- runtime state / generated data ---
 state.db
 data.json
-crops.json
 cropsettings.json
 selections.json
 match_report.csv

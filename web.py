@@ -1,5 +1,4 @@
 import base64
-import io
 import json
 import os
 import re
@@ -13,12 +12,11 @@ from flask import Flask, request, send_file, render_template, abort, jsonify
 from PIL import Image, ImageEnhance, ImageFilter
 
 ALLOWED_IMG_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
-CANDIDATE_DIRS = ["./thumnails_culled", "./thumbnails_culled"]
+CANDIDATE_DIRS = ["./thumbnails_culled"]
 CONFIG_PATH = Path("./config.json")
 RENDERED_DIR = Path("./thumbnail_rendered")
 DATA_PATH = Path("./data.json")
 SELECTIONS_PATH = Path("./selections.json")
-CROPS_PATH = Path("./crops.json")
 PREVIEW_DIR = Path("./.previews")
 PREVIEW_WIDTH = 800
 PREVIEW_QUALITY = 66
@@ -33,18 +31,9 @@ def _cover_169(im):
     nh = int(round(w / tar)); y = int((h - nh) * 0.18); return im.crop((0, y, w, y + nh))
 
 
-def _crop_box(im, box):
-    """box = [x,y,w,h] normalized -> cropped PIL image."""
-    W, H = im.size
-    x = int(round(box[0] * W)); y = int(round(box[1] * H))
-    w = max(1, int(round(box[2] * W))); h = max(1, int(round(box[3] * H)))
-    return im.crop((x, y, min(W, x + w), min(H, y + h)))
-
-
-def process_preview(im, box=None, width=PREVIEW_WIDTH):
-    """Match the right-side canvas look: face-centered crop (or cover-fit) + contrast/sat + sharpen."""
-    im = im.convert("RGB")
-    im = (_crop_box(im, box) if box else _cover_169(im)).resize((width, round(width * 9 / 16)))
+def process_preview(im, width=PREVIEW_WIDTH):
+    """Match the right-side canvas look: 16:9 cover-fit + contrast/sat + sharpen."""
+    im = _cover_169(im.convert("RGB")).resize((width, round(width * 9 / 16)))
     im = ImageEnhance.Contrast(im).enhance(1.04)
     im = ImageEnhance.Color(im).enhance(1.08)
     return im.filter(ImageFilter.UnsharpMask(radius=1.5, percent=75, threshold=2))
@@ -98,9 +87,7 @@ def load_json(path: Path) -> dict:
         return {}
 
 
-CROPS = load_json(CROPS_PATH)  # culled filename -> [x,y,w,h] normalized face-crop box
-CROPSET_PATH = Path("./cropsettings.json")
-CROPSET = load_json(CROPSET_PATH)  # legacy seed only
+CROPSET_PATH = Path("./cropsettings.json")  # legacy seed for the one-time DB migration
 
 # ---- SQLite persistence (authoritative for user edits: selection, title/desc, crop) ----
 DB_PATH = Path("./state.db")
@@ -159,22 +146,8 @@ def load_all_metadata() -> dict:
     } for k, v in data.items()}
 
 
-def save_metadata(filename: str, title: str, desc: str) -> None:
-    data = load_all_metadata()
-    data[filename] = {"title": title, "desc": desc}
-    with open(DATA_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-def save_selection(vkey: str, filename: str) -> None:
-    sel = load_json(SELECTIONS_PATH)
-    sel[vkey] = filename
-    with open(SELECTIONS_PATH, "w", encoding="utf-8") as f:
-        json.dump(sel, f, ensure_ascii=False, indent=2)
-
-
-def _json_reverse_order() -> dict:
-    """Map video-key -> position so the UI follows the input JSON order, reversed."""
+def _json_order() -> dict:
+    """Map video-key -> position so the UI follows the input JSON (upload) order."""
     ref = load_json(Path("./thumbnail_metadata_reference.json"))  # vkey -> {yt_id,...}
     key_to_id = {k: (v.get("yt_id") if isinstance(v, dict) else None) for k, v in ref.items()}
     order_ids = []
@@ -196,7 +169,7 @@ def build_videos() -> list[dict]:
     groups: dict[str, list[str]] = {}
     for f in files:
         groups.setdefault(video_key(f), []).append(f)
-    pos = _json_reverse_order()
+    pos = _json_order()
     ordered = sorted(groups, key=lambda k: pos.get(k, 10**9))
     videos = []
     for vkey in ordered:
@@ -243,7 +216,6 @@ def index():
         culled_dir=str(CULLED_DIR),
         config=config,
         config_json=json.dumps(config),
-        crops_json=json.dumps(CROPS),
         cropset_json=json.dumps(cropset_map()),
     )
 
@@ -261,7 +233,7 @@ def serve_preview():
     if not cache.is_relative_to(base):
         abort(400)
     if (not cache.exists()) or cache.stat().st_mtime < src.stat().st_mtime:
-        im = process_preview(Image.open(src), CROPS.get(filename))
+        im = process_preview(Image.open(src))
         try:
             im.save(cache, "AVIF", quality=PREVIEW_QUALITY)
         except Exception:

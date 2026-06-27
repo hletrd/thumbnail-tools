@@ -105,7 +105,6 @@ templates/index.html       dark per-video UI + canvas render + wheel/drag crop
 scripts/dense_extract.py   ±1s-sharpest frame sourcing (yt-dlp + ffmpeg)
 scripts/cull_model.py      auto-cull: sharpness + face → 15 best per video
 scripts/autocorrect.py     white-point lift + gentle sharpen on culled frames
-scripts/facecrop.py        (optional) auto face-centered crop boxes → crops.json
 extract.py                 original local-video keyframe extractor (ffmpeg)
 docs/PIPELINE.md           full data pipeline / how candidates were produced
 downloads/                 kept source videos + .done markers (gitignored)

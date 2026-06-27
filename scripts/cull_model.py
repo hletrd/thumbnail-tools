@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Model-assisted cull: pick K best frames per video into thumbnails_culled/.
 Score = sharpness (stage-region Tenengrad) + face presence (Haar, stage region only,
-weighted by size & centeredness) - exposure penalty; then greedy diversity (dHash).
+weighted by size & centeredness) - exposure penalty; then take K sharpest distinct (dHash).
 Run with the ML venv python (has cv2). Faces make fancam thumbnails far better."""
-import sys, shutil
+import shutil
 from pathlib import Path
 import numpy as np
 import cv2
@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "thumbnails"
 DST = ROOT / "thumbnails_culled"
 K = 15            # candidates shown per video
-POOL = 24         # (unused; selection is sharpness-first with dup-skip)
 DST.mkdir(parents=True, exist_ok=True)
 cv2.setNumThreads(1)
 FACE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")

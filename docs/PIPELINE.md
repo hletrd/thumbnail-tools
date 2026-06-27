@@ -105,13 +105,6 @@ caching made edits appear "unchanged".
 > LED-stage content, not a decode bug (verified: AVIF decodes identically to the
 > source JPEG).
 
-## 5. Optional auto face-crop (`scripts/facecrop.py`)
-
-Computes a face-centered 16:9 crop box per frame (`crops.json`). **Disabled by
-default**: Haar false-positives cut faces and the forced min-zoom over-cropped.
-Manual wheel-zoom in the UI replaced it. Kept for reference; empty `crops.json`
-→ cover-fit everywhere.
-
 ---
 
 ## Re-running the cull stage
