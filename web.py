@@ -104,7 +104,13 @@ def init_db():
     with _db_lock, db() as conn:
         conn.execute("""CREATE TABLE IF NOT EXISTS video_state(
             key TEXT PRIMARY KEY, selected TEXT, title TEXT, desc TEXT,
-            zoom REAL, px REAL, py REAL, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)""")
+            zoom REAL, px REAL, py REAL, bri REAL, con REAL, sat REAL,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP)""")
+        # add adjustment columns to a pre-existing DB that predates them
+        have = {r[1] for r in conn.execute("PRAGMA table_info(video_state)")}
+        for col in ("bri", "con", "sat"):
+            if col not in have:
+                conn.execute(f"ALTER TABLE video_state ADD COLUMN {col} REAL")
         # one-time migration from the legacy JSON files
         n = conn.execute("SELECT COUNT(*) FROM video_state").fetchone()[0]
         if n == 0:
@@ -119,7 +125,7 @@ def init_db():
 
 
 def state_set(key, **fields):
-    cols = [c for c in ("selected", "title", "desc", "zoom", "px", "py") if c in fields]
+    cols = [c for c in ("selected", "title", "desc", "zoom", "px", "py", "bri", "con", "sat") if c in fields]
     if not cols:
         return
     with _db_lock, db() as conn:
@@ -188,10 +194,12 @@ def build_videos() -> list[dict]:
 
 
 def cropset_map() -> dict:
+    """Per-video crop + colour adjustments (only the fields the user has set)."""
     out = {}
     for k, r in state_all().items():
-        if r.get("zoom") is not None:
-            out[k] = {"zoom": r["zoom"], "px": r.get("px", 0.5), "py": r.get("py", 0.35)}
+        m = {c: r[c] for c in ("zoom", "px", "py", "bri", "con", "sat") if r.get(c) is not None}
+        if m:
+            out[k] = m
     return out
 
 
@@ -315,13 +323,17 @@ def cropset():
     key = str(payload.get("key", ""))
     if not key:
         abort(400, "Missing key")
-    try:
-        zoom = max(1.0, min(3.0, float(payload.get("zoom", 1.0))))
-        px = max(0.0, min(1.0, float(payload.get("px", 0.5))))
-        py = max(0.0, min(1.0, float(payload.get("py", 0.35))))
-    except (TypeError, ValueError):
-        abort(400, "Bad values")
-    state_set(key, zoom=round(zoom, 3), px=round(px, 3), py=round(py, 3))
+    ranges = {"zoom": (1.0, 3.0), "px": (0.0, 1.0), "py": (0.0, 1.0),
+              "bri": (0.2, 2.0), "con": (0.2, 2.0), "sat": (0.0, 3.0)}
+    fields = {}
+    for k, (lo, hi) in ranges.items():
+        if payload.get(k) is not None:
+            try:
+                fields[k] = round(max(lo, min(hi, float(payload[k]))), 3)
+            except (TypeError, ValueError):
+                abort(400, "Bad values")
+    if fields:
+        state_set(key, **fields)
     return jsonify({"ok": True})
 
 

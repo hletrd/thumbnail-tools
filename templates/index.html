@@ -54,6 +54,12 @@
     .btn.primary { background:var(--accent); border-color:var(--accent); color:#1a0a0c; }
     .status { font-size:12px; color:var(--text-secondary); }
     .status .ok { color:var(--accent); }
+    .adj { display:flex; flex-direction:column; gap:5px; padding:2px 0; }
+    .adj .row { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-secondary); }
+    .adj .row span { width:28px; flex-shrink:0; }
+    .adj input[type=range] { flex:1; accent-color:var(--accent); height:3px; }
+    .adj .reset { align-self:flex-end; background:none; border:none; color:var(--text-tertiary); font:inherit; font-size:11px; cursor:pointer; padding:0; }
+    .adj .reset:hover { color:var(--accent); }
     @media (max-width:780px){ .video{ grid-template-columns:1fr; } .side{ order:-1; } }
   </style>
 </head>
@@ -79,6 +85,12 @@
       </div>
       <div class="side">
         <div class="pvwrap"><span class="hint">후보를 클릭하면 미리보기</span></div>
+        <div class="adj">
+          <div class="row"><span>밝기</span><input type="range" class="bri" min="0.5" max="1.5" step="0.01" value="1"></div>
+          <div class="row"><span>대비</span><input type="range" class="con" min="0.6" max="1.6" step="0.01" value="1.04"></div>
+          <div class="row"><span>채도</span><input type="range" class="sat" min="0" max="2" step="0.01" value="1.08"></div>
+          <button type="button" class="reset">초기화</button>
+        </div>
         <label>제목</label>
         <textarea class="title" rows="2">{{ v.title }}</textarea>
         <label>설명</label>
@@ -116,7 +128,9 @@ async function renderCanvas(canvas, file, title, desc, crop){
   const img = await loadFull(file); const ctx = canvas.getContext('2d');
   const W = Number(CONFIG.target_width)||img.width, H = Number(CONFIG.target_height)||img.height;
   canvas.width=W; canvas.height=H; ctx.clearRect(0,0,W,H);
-  ctx.save(); ctx.filter='contrast(1.04) saturate(1.08)';
+  ctx.save();
+  { const bri=crop&&crop.bri!=null?crop.bri:1, con=crop&&crop.con!=null?crop.con:1.04, sat=crop&&crop.sat!=null?crop.sat:1.08;
+    ctx.filter=`brightness(${bri}) contrast(${con}) saturate(${sat})`; }
   { const b=baseRect(img.width,img.height,W,H);
     const z=(crop&&crop.zoom)||1, px=(crop&&crop.px!=null)?crop.px:0.5, py=(crop&&crop.py!=null)?crop.py:0.35;
     const sw=b.sw/z, sh=b.sh/z, sx=b.sx+(b.sw-sw)*px, sy=b.sy+(b.sh-sh)*py;
@@ -146,13 +160,19 @@ function initVideo(sec){
   const pv=sec.querySelector('.pvwrap'), titleEl=sec.querySelector('.title'), descEl=sec.querySelector('.desc'),
         saveBtn=sec.querySelector('.save'), dlBtn=sec.querySelector('.dl'), status=sec.querySelector('.status');
   const key=sec.dataset.key;
-  const crop=Object.assign({zoom:1,px:0.5,py:0.35}, CROPSET[key]||{});
+  const crop=Object.assign({zoom:1,px:0.5,py:0.35,bri:1,con:1.04,sat:1.08}, CROPSET[key]||{});
   let canvas=null, rendered=false, raf=0, pt=0, drag=null;
   function ensure(){ if(!canvas){ canvas=document.createElement('canvas'); pv.innerHTML=''; pv.appendChild(canvas);} return canvas; }
   async function preview(){ const file=sec.dataset.selected; if(!file)return; await renderCanvas(ensure(),file,titleEl.value.trim(),descEl.value.trim(),crop); rendered=true; saveBtn.disabled=false; dlBtn.disabled=false; pv.style.cursor=crop.zoom>1?'grab':'default'; }
   function redraw(){ if(raf||!sec.dataset.selected||!canvas) return; raf=requestAnimationFrame(()=>{ raf=0; renderCanvas(canvas,sec.dataset.selected,titleEl.value.trim(),descEl.value.trim(),crop); }); }
-  function persist(){ clearTimeout(pt); pt=setTimeout(()=>{ fetch('/cropset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,zoom:crop.zoom,px:crop.px,py:crop.py})}).catch(()=>{}); },350); }
+  function persist(){ clearTimeout(pt); pt=setTimeout(()=>{ fetch('/cropset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,zoom:crop.zoom,px:crop.px,py:crop.py,bri:crop.bri,con:crop.con,sat:crop.sat})}).catch(()=>{}); },350); }
   function fname(){ const t=(titleEl.value.trim()||key).replace(/[\/\\:*?"<>|]+/g,' ').slice(0,80); return t+'.jpg'; }
+  const briEl=sec.querySelector('.bri'), conEl=sec.querySelector('.con'), satEl=sec.querySelector('.sat');
+  briEl.value=crop.bri; conEl.value=crop.con; satEl.value=crop.sat;
+  function onAdj(){ crop.bri=parseFloat(briEl.value); crop.con=parseFloat(conEl.value); crop.sat=parseFloat(satEl.value); redraw(); persist(); }
+  [briEl,conEl,satEl].forEach(el=>el.addEventListener('input',onAdj));
+  sec.querySelector('.adj .reset').addEventListener('click',()=>{ crop.zoom=1;crop.px=0.5;crop.py=0.35;crop.bri=1;crop.con=1.04;crop.sat=1.08;
+    briEl.value=1;conEl.value=1.04;satEl.value=1.08; pv.style.cursor='default'; redraw(); persist(); });
   pv.addEventListener('wheel', e=>{ if(!sec.dataset.selected) return; e.preventDefault();
     const r=pv.getBoundingClientRect(); const cu=(e.clientX-r.left)/r.width, cv=(e.clientY-r.top)/r.height;
     const o=crop.zoom; let s=-e.deltaY*0.0008; s=Math.max(-0.04,Math.min(0.04,s)); let z=Math.max(1,Math.min(3,o*(1+s)));
