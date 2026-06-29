@@ -16,10 +16,11 @@ source videos ──► candidate frames ──► auto-cull (model) ──► w
                    sharpest frame/sec   15 best / video       per video         (+ direct download)
 ```
 
-1. **Candidate frames** — `scripts/dense_extract.py` downloads each video
-   (kept in `downloads/`), decodes at 6 fps and keeps the **sharpest frame per
-   1-second bucket** into `thumbnails/<key>/` (1920px). This ±1s-sharpest
-   sampling avoids motion-blur far better than fixed 1 fps. See
+1. **Candidate frames** — `scripts/hdr_extract.py` downloads each video (HDR
+   `335` when available, else SDR `137`; kept in `downloads_hdr/`), decodes at
+   6 fps through an HDR→SDR tone-map (hable — no highlight clipping) and keeps
+   the **sharpest frame per 1-second bucket** into `thumbnails/<key>/` (1920px).
+   This ±1s-sharpest sampling avoids motion-blur far better than fixed 1 fps. See
    [`docs/PIPELINE.md`](docs/PIPELINE.md) for sourcing details (YouTube via
    `yt-dlp`, or local masters via `ffmpeg`).
 2. **Auto-cull** — `scripts/cull_model.py` scores every frame by **sharpness**
@@ -102,7 +103,8 @@ Legacy `selections.json` / `cropsettings.json` are auto-migrated on first run.
 web.py                     Flask app (gallery, preview/image, save, DB)
 config.json                render config (fonts, sizes, stroke, 1920x1080, 2MB cap)
 templates/index.html       dark per-video UI + canvas render + wheel/drag crop
-scripts/dense_extract.py   ±1s-sharpest frame sourcing (yt-dlp + ffmpeg)
+scripts/hdr_extract.py     HDR(335)→SDR tonemap, ±1s-sharpest sourcing (current)
+scripts/dense_extract.py   SDR-only ±1s-sharpest sourcing (predecessor)
 scripts/cull_model.py      auto-cull: sharpness + face → 15 best per video
 scripts/autocorrect.py     white-point lift + gentle sharpen on culled frames
 extract.py                 original local-video keyframe extractor (ffmpeg)

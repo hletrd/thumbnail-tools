@@ -33,6 +33,8 @@ __pycache__/
 
 # kept source video downloads (large)
 downloads/
+downloads_hdr/
 .dense_tmp/
+.hdr_tmp/
 cookies.txt
 sources.tsv

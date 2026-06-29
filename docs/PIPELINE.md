@@ -21,19 +21,27 @@ match. Modern YouTube needs help:
 - **PO token** is required for >360p. Run the **bgutil POT provider**
   (`docker run -d -p 4416:4416 brainicism/bgutil-ytdlp-pot-provider`) + the
   `bgutil-ytdlp-pot-provider` yt-dlp plugin. No cookies needed for public videos.
-- Format: prefer **`137` (1080p H.264, always SDR)** → no tone-mapping needed,
-  decodes everywhere: `-f "137/bv*[height<=1080][vcodec^=avc1]/b[height<=1080]"`.
+- Format: most uploads are **Rec.2020 HDR** (HLG/PQ); YouTube's SDR avc1
+  (`137`) is already highlight-clipped. Prefer the **1080p HDR stream (`335`,
+  vp9.2)** and tone-map it, falling back to `137` only for SDR-only uploads:
+  `-f "335/137/bv*[height<=1080][vcodec^=avc1]/b[height<=1080]"`.
+- **HDR→SDR tone-map** needs an ffmpeg WITH `zscale`+`tonemap` (stock macOS
+  Homebrew lacks zimg — use an evermeet/BtbN static build). Hable rolls
+  highlights off instead of clipping them:
+  `zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p`
 - **Bot check** ("Sign in to confirm you're not a bot") triggers after ~100+
   downloads from one IP. Mitigation: keep parallelism low (`PAR=1–2`), retry,
   or let it cool down. Valid login cookies (`--cookies cookies.txt`) also clear
   it, but stale cookies do **not** help.
-- Extraction (`scripts/dense_extract.py`): download the video (kept in
-  `downloads/`, never deleted), decode at **6 fps**, and keep only the
-  **sharpest frame per 1-second bucket** → `thumbnails/<key>/<key>_%03d.jpg`.
-  This ±1s-sharpest sampling beats fixed 1 fps: on fast-motion stages a whole
-  second can be motion-blur except one crisp instant, and this captures it.
-  Resumable (`downloads/<key>.done`); `PAR=1` after a bot-check, `cookies.txt`
-  at the repo root is auto-used to bypass one.
+- Extraction (`scripts/hdr_extract.py`): download the chosen stream (kept in
+  `downloads_hdr/`, never deleted), decode at **6 fps** through the tone-map
+  (HDR) or a plain scale (SDR), and keep only the **sharpest frame per
+  1-second bucket** → `thumbnails/<key>/<key>_%03d.jpg`. ±1s-sharpest beats
+  fixed 1 fps: a whole second can be motion-blur except one crisp instant.
+  HDR is detected from `color_transfer` (substring match — ffprobe appends a
+  trailing comma). Resumable (`downloads_hdr/<key>.done`); `PAR=1` after a
+  bot-check; `cookies.txt` at the repo root is auto-used to bypass one.
+  (`scripts/dense_extract.py` is the earlier SDR-only predecessor.)
 
 ### NAS masters (alternative, `ffmpeg`)
 - Masters live under `…/photos/<date-event>/exported*/` named by song or artist.
@@ -89,9 +97,10 @@ Pick `K=15` in **score (sharpness) order**, skipping near-identical frames
 
 ## 3. Auto-correct (`scripts/autocorrect.py`)
 
-HLG's reference white sits at ~75% of the signal, so tone-mapped frames look
-dull. Per culled frame: lift the 99.5th-percentile luminance toward 250
-(gain capped ≤1.5×, bright frames untouched), then a gentle unsharp mask.
+Just a gentle unsharp mask now. The HDR→SDR tone-map (+ the per-video
+brightness slider) handles exposure, so the old white-point lift is **disabled**
+(`GAIN_CAP=1.0`) — lifting whites would re-clip the highlights the tone-map
+worked to preserve.
 
 ## 4. Previews (canvas-matched, in `web.py`)
 
