@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Auto-correct culled thumbnails: lift dull (HLG-tonemapped) whites toward 100%,
-gentle sharpen. Bright frames are left alone (gain clamps to 1.0)."""
+"""Auto-correct culled thumbnails: gentle sharpen only. Exposure is handled by
+the HDR->SDR tonemap at extraction (+ the per-video brightness slider), so the
+old white-point lift is disabled (GAIN_CAP=1.0) to avoid re-clipping highlights."""
 import sys
 from pathlib import Path
 import numpy as np
@@ -8,7 +9,7 @@ from PIL import Image, ImageFilter
 import concurrent.futures as cf
 
 CULL = Path(__file__).resolve().parents[1] / "thumbnails_culled"
-GAIN_CAP = 1.5
+GAIN_CAP = 1.0          # white-lift disabled (HDR tonemap handles exposure)
 WHITE_TARGET = 250.0
 
 def correct(p):
