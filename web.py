@@ -324,7 +324,7 @@ def cropset():
     if not key:
         abort(400, "Missing key")
     ranges = {"zoom": (1.0, 3.0), "px": (0.0, 1.0), "py": (0.0, 1.0),
-              "bri": (0.2, 2.0), "con": (0.2, 2.0), "sat": (0.0, 3.0)}
+              "bri": (0.1, 4.0), "con": (0.2, 2.0), "sat": (0.0, 3.0)}
     fields = {}
     for k, (lo, hi) in ranges.items():
         if payload.get(k) is not None:
