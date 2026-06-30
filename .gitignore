@@ -38,3 +38,4 @@ downloads_hdr/
 .hdr_tmp/
 cookies.txt
 sources.tsv
+.new_meta.json

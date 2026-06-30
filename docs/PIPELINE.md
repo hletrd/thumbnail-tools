@@ -121,10 +121,24 @@ caching made edits appear "unchanged".
 ```bash
 python3 -m venv mlvenv          # Python ≤ 3.13 for opencv wheels
 mlvenv/bin/pip install opencv-python-headless numpy pillow
-mlvenv/bin/python scripts/cull_model.py    # thumbnails/ → thumbnails_culled/ (9 each)
-mlvenv/bin/python scripts/autocorrect.py   # white-lift + sharpen
+mlvenv/bin/python scripts/cull_model.py    # thumbnails/ → thumbnails_culled/ (15 each)
+mlvenv/bin/python scripts/autocorrect.py   # gentle sharpen (white-lift disabled)
 # then regenerate previews (web.process_preview) and restart the server
 ```
+
+## Adding newly-published uploads
+
+When the channel gains new fancams, drop the refreshed export into `inputs/` and:
+
+```bash
+python scripts/prep_new.py                 # new 직캠 ids → sources.tsv + reference
+FFMPEG=/path/to/ffmpeg-with-zscale python scripts/hdr_extract.py   # only new ids download
+# re-cull (above), then set data.json title/desc for the new keys from .new_meta.json
+```
+
+`prep_new.py` is idempotent; `hdr_extract.py` skips anything already in
+`downloads_hdr/`. Recent uploads may only have SDR until YouTube finishes their
+HDR/4K transcode — re-run later to pick up the HDR rendition.
 
 ## Gotchas (quick reference)
 - `cv2.CascadeClassifier` is not thread-safe → use processes.
