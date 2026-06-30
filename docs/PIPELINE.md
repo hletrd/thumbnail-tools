@@ -140,6 +140,17 @@ FFMPEG=/path/to/ffmpeg-with-zscale python scripts/hdr_extract.py   # only new id
 `downloads_hdr/`. Recent uploads may only have SDR until YouTube finishes their
 HDR/4K transcode — re-run later to pick up the HDR rendition.
 
+### Higher-quality source: local HDR masters
+
+When the original exports exist (e.g. on the NAS), use them instead of YouTube —
+they're 4K HDR (HLG) and available immediately, beating YouTube's 1080p (and any
+not-yet-transcoded SDR fallback). `scripts/master_extract.py <masters_dir>
+<mapping.tsv>` runs the same tonemap + ±1s-sharpest over local masters; run it
+where the masters live (the NAS static johnvansickle ffmpeg has zscale) and pull
+the resulting `<key>/` dirs into `thumbnails/`, then re-cull. `.mov` masters keep
+the moov atom at the end, so probe/extract on the NAS rather than from a partial
+pull.
+
 ## Gotchas (quick reference)
 - `cv2.CascadeClassifier` is not thread-safe → use processes.
 - OpenCV / mediapipe have **no Python 3.14 wheels** → use a 3.12/3.13 venv (`uv`).
