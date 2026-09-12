@@ -1,0 +1,15 @@
+{
+  "videos": 143,
+  "final_images": 286,
+  "dimensions": [
+    1920,
+    1080
+  ],
+  "format": "JPEG",
+  "max_bytes": 1317583,
+  "total_bytes": 152424829,
+  "original_hash_matches": 143,
+  "visible_face_rectangle_crop_checks": 260,
+  "text_boxes_outside_photo": true,
+  "visual_review": "All 286 thumbnails compared to originals in 12 contact sheets; English word-wrap and long medley text corrected."
+}

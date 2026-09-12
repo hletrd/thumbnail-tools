@@ -17,6 +17,9 @@ thumbnail_rendered/*.jpeg
 thumbnail_rendered/review-*/
 thumbnail_rendered/variants-*/*.png
 thumbnail_rendered/variants-*/best/
+thumbnail_rendered/variants-*/final/
+thumbnail_rendered/variants-*/previews/
+thumbnail_rendered/variants-*/*.zip
 .previews/
 
 # --- runtime state / generated data ---
