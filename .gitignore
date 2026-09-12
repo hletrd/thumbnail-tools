@@ -14,6 +14,9 @@ thumbnails_culled/*.jpg
 thumbnails_culled/*.jpeg
 thumbnail_rendered/*.jpg
 thumbnail_rendered/*.jpeg
+thumbnail_rendered/review-*/
+thumbnail_rendered/variants-*/*.png
+thumbnail_rendered/variants-*/best/
 .previews/
 
 # --- runtime state / generated data ---
